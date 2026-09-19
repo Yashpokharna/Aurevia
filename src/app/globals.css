@@ -1,26 +1,98 @@
 @import "tailwindcss";
 
+/*
+ * Aurevia — warm paper, deep ink, brass accent.
+ * The palette is deliberately light-only: the brand reads as printed matter,
+ * and a dark inversion of a cream/brass system loses what makes it work.
+ */
+@theme {
+  --color-canvas: #fbf8f3;
+  --color-canvas-deep: #f3ece1;
+  --color-canvas-sink: #ece2d4;
+
+  --color-ink: #171310;
+  --color-ink-soft: #4a423a;
+  --color-ink-muted: #887c6e;
+
+  --color-line: #e5dbcc;
+  --color-line-strong: #d6c8b4;
+
+  --color-brass: #9a6b35;
+  --color-brass-bright: #c79a5e;
+  --color-brass-wash: #f6efe3;
+
+  --color-critical: #a3341f;
+  --color-positive: #3f6b4a;
+
+  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Visible, on-brand focus ring everywhere, including custom controls. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-brass);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+::selection {
+  background-color: var(--color-brass);
+  color: var(--color-canvas);
+}
+
+/* Page shell: one place to change the site's gutter and max width. */
+@utility shell {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 78rem;
+  padding-inline: 1.25rem;
+  @media (width >= 48rem) {
+    padding-inline: 2.5rem;
+  }
+}
+
+/* Letter-spaced micro-labels used above headings and in the footer. */
+@utility eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+@utility hairline {
+  border-bottom: 1px solid var(--color-line);
 }
