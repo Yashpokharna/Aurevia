@@ -74,14 +74,19 @@ export function ProductCard({
           ) : null}
         </div>
 
-        <div className="mt-4 flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <h3 className="font-display text-lg leading-snug text-ink">{product.title}</h3>
-            {product.subtitle ? (
-              <p className="mt-1 truncate text-sm text-ink-muted">{product.subtitle}</p>
-            ) : null}
-          </div>
-          <div className="shrink-0 pt-0.5 text-right">
+        {/*
+         * Title over price, not beside it. These cards sit in a 4-up grid on the
+         * homepage, and at that width a side-by-side row makes long titles wrap
+         * into the price and its discount badge.
+         */}
+        <div className="mt-4">
+          <h3 className="line-clamp-2 font-display text-base leading-snug text-ink md:text-lg">
+            {product.title}
+          </h3>
+          {product.subtitle ? (
+            <p className="mt-1 truncate text-sm text-ink-muted">{product.subtitle}</p>
+          ) : null}
+          <div className="mt-2">
             <Price product={product} currency={currency} size="sm" />
           </div>
         </div>
