@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -42,3 +43,10 @@ next-env.d.ts
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Uploaded product media (served from /public/uploads)
+/public/uploads/*
+!/public/uploads/.gitkeep
+
+# JSON data store — this is runtime state, not source
+/data/*.json
