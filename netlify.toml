@@ -1,0 +1,14 @@
+# Netlify build configuration.
+
+[build.environment]
+  # Netlify scans the build output for the value of every environment variable
+  # and fails the deploy if it finds one. Anything prefixed NEXT_PUBLIC_ is
+  # compiled into the browser bundle deliberately — the contact address is
+  # printed in the footer, and the Supabase URL and publishable key are what the
+  # browser uses to upload media. They are public by design, so they are listed
+  # here as known-public.
+  #
+  # SUPABASE_SECRET_KEY and ADMIN_PASSWORD are deliberately NOT listed: if
+  # either ever reaches the bundle, the scan should fail the build. That is the
+  # check working, not a nuisance.
+  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_CONTACT_EMAIL,NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
