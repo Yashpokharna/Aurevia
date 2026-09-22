@@ -53,7 +53,7 @@ function SaveButton({ isNew }: { isNew: boolean }) {
   );
 }
 
-export function ProductForm({ product }: { product?: Product }) {
+export function ProductForm({ product, maxVideoLabel }: { product?: Product; maxVideoLabel?: string }) {
   const [state, formAction] = useActionState<FormState, FormData>(saveProductAction, {});
   const [media, setMedia] = useState<ProductMedia[]>(product?.media ?? []);
   const [title, setTitle] = useState(product?.title ?? "");
@@ -191,7 +191,7 @@ export function ProductForm({ product }: { product?: Product }) {
         title="Media"
         description="The first image is the cover. Video gets its own tab in the gallery."
       >
-        <MediaManager value={media} onChange={setMedia} />
+        <MediaManager value={media} onChange={setMedia} maxVideoLabel={maxVideoLabel} />
       </Section>
 
       <Section

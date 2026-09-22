@@ -85,23 +85,54 @@ any order is marked paid, and an unsigned or wrongly-signed webhook is rejected.
 
 ### Data and media
 
-Both are deliberately behind small interfaces so they can be replaced without
-touching any page or component:
+Two backends, chosen automatically:
 
-- **Products and orders** — `src/lib/repository/`. Currently JSON files in
-  `data/`. Swap the export at the bottom of `products.ts` for a Postgres,
-  Supabase or Prisma implementation of `ProductRepository`.
-- **Images and video** — `src/lib/storage/`. Currently writes to
-  `public/uploads/`. Swap the export for a Cloudinary / S3 / Bunny adapter.
+| | Products & orders | Images & video |
+| --- | --- | --- |
+| **Supabase** (when its keys are set) | Postgres | Supabase Storage |
+| **Local** (no keys — laptop only) | JSON files in `data/` | `public/uploads/` |
 
-> **Before going live, do both.** The JSON store and local uploads assume a
-> writable, persistent disk. Most hosts (Vercel included) give you neither, so
-> products added in production would disappear on the next deploy, and serving
-> video off the app server is slow and expensive. Moving to a real database and
-> a media CDN is the one migration this project expects you to make.
+Everything goes through two small interfaces — `ProductRepository` /
+`OrderRepository` in `src/lib/repository/contracts.ts`, and `StorageAdapter`
+in `src/lib/storage/` — so no page or component knows which backend is live.
+The admin shows which one it's saving to.
+
+The local backend exists so the app runs with zero setup. **It cannot save
+anything on Netlify or Vercel**, whose servers can't write files; there the
+site falls back to read-only sample data and the admin says so.
+
+#### Setting up Supabase
+
+1. Create a project at [supabase.com](https://supabase.com) (free tier is fine).
+2. **SQL Editor → New query**, paste [`supabase/schema.sql`](supabase/schema.sql),
+   **Run**. Creates the tables, indexes, the `product-media` storage bucket and
+   the payment function. Safe to re-run.
+3. **Project Settings → API**: copy the project URL, the *publishable* key and
+   the *secret* key into `.env.local` (names are in `.env.example`).
+4. `npm run db:import` — copies your local products, orders and uploaded media
+   into Supabase. Safe to re-run.
+5. Add the same three variables in **Netlify → Site configuration →
+   Environment variables**, then redeploy.
+
+What the database adds beyond "it persists":
+
+- **Stock goes down when something sells.** `mark_order_paid` locks the order,
+  marks it paid and reduces inventory in one transaction, exactly once — even
+  when the browser, success page and webhook all confirm the same payment.
+- **Deleting a product never deletes its sales history** (`ON DELETE SET NULL`),
+  and orders keep the title and price as they were at purchase.
+- **Nothing is readable with the public key.** Row Level Security is on with no
+  policies; only the server, holding the secret key, can touch the tables.
+- **Uploads go straight from the browser to storage** via short-lived signed
+  URLs, after the server checks the admin session, file type and size. Netlify
+  rejects function request bodies over ~6 MB, so video couldn't go through our
+  server anyway.
+
+Limits: Supabase's free plan caps a single file at **50 MB**, which is the video
+limit in production (100 MB locally).
 
 Remote image hosts must be allowlisted in `next.config.ts` before `next/image`
-will render them.
+will render them; Supabase Storage already is.
 
 ### Admin
 

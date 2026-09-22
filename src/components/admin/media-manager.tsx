@@ -9,12 +9,67 @@ const ACCEPT = "image/jpeg,image/png,image/webp,image/avif,video/mp4,video/webm,
 let counter = 0;
 const nextId = () => `m-${Date.now().toString(36)}-${counter++}`;
 
+interface UploadResult {
+  url: string;
+  kind: MediaKind;
+}
+
+async function readError(response: Response, fallback: string): Promise<string> {
+  try {
+    const payload = await response.json();
+    return payload.error ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+/**
+ * Two-step upload. The server checks the session, type and size and either
+ * hands back a signed URL (Supabase) — in which case the file goes straight
+ * from this browser to storage, never through our server — or says "server",
+ * in which case we POST the file to /api/upload as in local development.
+ */
+async function uploadFile(file: File): Promise<UploadResult> {
+  const sign = await fetch("/api/upload/sign", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ contentType: file.type, size: file.size }),
+  });
+  if (!sign.ok) throw new Error(await readError(sign, "Upload failed."));
+  const plan = await sign.json();
+
+  if (plan.mode === "direct") {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    if (!url || !key) {
+      throw new Error("Supabase public URL/key missing — set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.");
+    }
+    // Loaded only when actually uploading, so it never weighs on the storefront.
+    const { createClient } = await import("@supabase/supabase-js");
+    const { error } = await createClient(url, key)
+      .storage.from(plan.bucket)
+      .uploadToSignedUrl(plan.path, plan.token, file, { contentType: file.type, cacheControl: "31536000" });
+    if (error) throw new Error(error.message);
+    return { url: plan.publicUrl, kind: plan.kind };
+  }
+
+  const body = new FormData();
+  body.append("file", file);
+  const response = await fetch("/api/upload", { method: "POST", body });
+  if (!response.ok) throw new Error(await readError(response, "Upload failed."));
+  const payload = await response.json();
+  return { url: payload.url, kind: payload.kind };
+}
+
 export function MediaManager({
   value,
   onChange,
+  maxVideoLabel = "100MB",
 }: {
   value: ProductMedia[];
   onChange: (media: ProductMedia[]) => void;
+  /** Supabase's free plan caps files at 50MB, so the server tells us the real limit. */
+  maxVideoLabel?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -37,17 +92,8 @@ export function MediaManager({
     // dev server out of memory.
     for (const file of list) {
       try {
-        const body = new FormData();
-        body.append("file", file);
-        const response = await fetch("/api/upload", { method: "POST", body });
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error ?? "Upload failed.");
-        added.push({
-          id: nextId(),
-          kind: payload.kind,
-          url: payload.url,
-          alt: "",
-        });
+        const result = await uploadFile(file);
+        added.push({ id: nextId(), kind: result.kind, url: result.url, alt: "" });
       } catch (error) {
         failures.push(`${file.name}: ${error instanceof Error ? error.message : "upload failed"}`);
       } finally {
@@ -114,7 +160,7 @@ export function MediaManager({
           </button>
         </p>
         <p className="mt-1.5 text-xs text-ink-muted">
-          JPEG, PNG, WebP, AVIF up to 15MB · MP4, WebM, MOV up to 100MB
+          JPEG, PNG, WebP, AVIF up to 15MB · MP4, WebM, MOV up to {maxVideoLabel}
         </p>
         <input
           ref={inputRef}
