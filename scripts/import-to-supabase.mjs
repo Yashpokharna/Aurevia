@@ -19,6 +19,12 @@ if (!url || !key) {
   process.exit(1);
 }
 
+if (key.startsWith("sb_publishable_") || key === process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) {
+  console.error("✗ SUPABASE_SECRET_KEY holds the publishable key, not the secret one.");
+  console.error("  Copy the key from the *Secret keys* section of the dashboard (starts with sb_secret_).");
+  process.exit(1);
+}
+
 const supabase = createClient(url, key, { auth: { persistSession: false } });
 const root = process.cwd();
 
