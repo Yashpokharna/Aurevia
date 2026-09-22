@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ProductForm } from "@/components/admin/product-form";
+import { formatBytes, MAX_VIDEO_BYTES } from "@/lib/storage";
 import { products } from "@/lib/repository/products";
 
 export const metadata: Metadata = {
@@ -15,7 +16,7 @@ export default async function EditProductPage(props: PageProps<"/admin/products/
 
   return (
     <div className="shell py-10">
-      <ProductForm product={product} />
+      <ProductForm product={product} maxVideoLabel={formatBytes(MAX_VIDEO_BYTES).replace(" ", "")} />
     </div>
   );
 }

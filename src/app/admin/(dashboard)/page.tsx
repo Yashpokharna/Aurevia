@@ -5,6 +5,7 @@ import { DeleteProductButton } from "@/components/admin/delete-product-button";
 import { formatMoney } from "@/lib/money";
 import { configuredGateways } from "@/lib/payments";
 import { storageMode } from "@/lib/repository/json-store";
+import { isSupabaseConfigured } from "@/lib/supabase/server";
 import { products } from "@/lib/repository/products";
 import { deleteProductAction } from "../actions";
 
@@ -55,7 +56,10 @@ export default async function AdminProductsPage(props: PageProps<"/admin">) {
         <div>
           <h1 className="font-display text-3xl text-ink">Products</h1>
           <p className="mt-1.5 text-sm text-ink-muted">
-            {page.total} total · {live} live · {page.total - live} draft
+            {page.total} total · {live} live · {page.total - live} draft ·{" "}
+            <span className={isSupabaseConfigured() ? "text-positive" : ""}>
+              {isSupabaseConfigured() ? "Saved to Supabase" : "Saved to local file"}
+            </span>
           </p>
         </div>
         <Link
