@@ -36,7 +36,12 @@ export function ProductCard({
             </div>
           )}
 
-          {/* Second shot crossfades in on hover — only on devices that hover. */}
+          {/*
+           * Second shot crossfades in on hover. Hidden with opacity only, never
+           * display:none — next/image measures the element on load and warns
+           * about a zero height when it isn't laid out. On touch screens it
+           * simply never becomes visible.
+           */}
           {secondary ? (
             <Image
               src={secondary.url}
@@ -44,7 +49,7 @@ export function ProductCard({
               aria-hidden="true"
               fill
               sizes="(min-width: 1024px) 30vw, (min-width: 640px) 45vw, 90vw"
-              className="hidden object-cover opacity-0 transition-opacity duration-500 group-hover:opacity-100 [@media(hover:hover)]:block"
+              className="object-cover opacity-0 transition-opacity duration-500 group-hover:opacity-100"
             />
           ) : null}
 

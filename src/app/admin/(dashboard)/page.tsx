@@ -4,6 +4,7 @@ import Link from "next/link";
 import { DeleteProductButton } from "@/components/admin/delete-product-button";
 import { formatMoney } from "@/lib/money";
 import { configuredGateways } from "@/lib/payments";
+import { storageMode } from "@/lib/repository/json-store";
 import { products } from "@/lib/repository/products";
 import { deleteProductAction } from "../actions";
 
@@ -20,11 +21,14 @@ export default async function AdminProductsPage(props: PageProps<"/admin">) {
   const searchParams = await props.searchParams;
   const saved = firstValue(searchParams.saved);
   const deleted = firstValue(searchParams.deleted);
+  const errorCode = firstValue(searchParams.error);
 
   // Drafts included: this is the place you need to see them.
   const page = await products.list({ includeDrafts: true, perPage: 500 });
   const live = page.items.filter((item) => item.status === "published").length;
   const gateways = configuredGateways();
+  // Read after products.list(), which is what triggers the fallback.
+  const readOnly = storageMode() === "memory";
 
   return (
     <div className="shell py-10">
@@ -36,6 +40,14 @@ export default async function AdminProductsPage(props: PageProps<"/admin">) {
       {deleted ? (
         <p className="mb-6 rounded-md border border-line bg-canvas-deep px-4 py-3 text-sm text-ink-soft">
           Product deleted.
+        </p>
+      ) : null}
+
+      {readOnly || errorCode === "readonly" ? (
+        <p className="mb-6 rounded-md border border-critical/25 bg-critical/8 px-4 py-3 text-sm text-critical">
+          <span className="font-medium">Read-only host:</span> this server can&apos;t write to disk, so
+          you&apos;re seeing the sample catalogue and changes won&apos;t save. Connect a database to
+          manage products in production.
         </p>
       ) : null}
 
