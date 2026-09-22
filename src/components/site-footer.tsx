@@ -44,11 +44,6 @@ export async function SiteFooter() {
                   New arrivals
                 </Link>
               </li>
-              <li>
-                <Link href="/#story" className="text-canvas/75 transition-colors hover:text-canvas">
-                  Our story
-                </Link>
-              </li>
             </ul>
           </nav>
 

@@ -21,6 +21,5 @@ export const brand = {
 
 export const siteNav = [
   { label: "Shop", href: "/products" },
-  { label: "Our story", href: "/#story" },
   { label: "Contact", href: "/#contact" },
 ] as const;

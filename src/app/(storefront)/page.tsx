@@ -252,46 +252,6 @@ export default async function HomePage() {
         </section>
       ) : null}
 
-      {/* Brand note — kept short, and kept below the products where it belongs. */}
-      <section id="story" className="shell py-14 md:py-16">
-        <div className="grid items-center gap-8 rounded-lg border border-line bg-canvas-deep/40 px-6 py-10 md:grid-cols-[1.3fr_1fr] md:gap-12 md:px-10 md:py-12">
-          <div>
-            <p className="eyebrow text-brass">Why {brand.name}</p>
-            <h2 className="mt-3 font-display text-2xl leading-snug text-ink md:text-3xl">
-              We would rather sell you one thing, once.
-            </h2>
-            <p className="mt-4 max-w-lg text-sm leading-relaxed text-ink-soft">
-              Every product here is one we use ourselves. We photograph the real item, list what it
-              is actually made of, and tell you when something is out of stock instead of pretending
-              otherwise.
-            </p>
-            <a
-              href={`mailto:${brand.contactEmail}`}
-              className="mt-6 inline-block border-b border-line-strong pb-1 text-sm text-ink transition-colors hover:border-ink"
-            >
-              Questions? Email us &rarr;
-            </a>
-          </div>
-
-          <dl className="grid grid-cols-3 gap-4 md:gap-6">
-            {[
-              { value: "2–4", label: "Days to dispatch" },
-              { value: "30", label: "Day returns" },
-              { value: "40+", label: "Countries" },
-            ].map((stat) => (
-              <div key={stat.label}>
-                <dt className="sr-only">{stat.label}</dt>
-                <dd>
-                  <span className="block font-display text-3xl text-ink">{stat.value}</span>
-                  <span className="mt-1 block text-xs leading-snug text-ink-muted">
-                    {stat.label}
-                  </span>
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-      </section>
     </>
   );
 }
