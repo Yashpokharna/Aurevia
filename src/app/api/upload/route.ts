@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/auth";
+import { isReadOnlyFsError } from "@/lib/repository/json-store";
 import { storage, UploadError } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
@@ -34,6 +35,15 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof UploadError) {
       return Response.json({ error: error.message }, { status: 415 });
+    }
+    if (isReadOnlyFsError(error)) {
+      return Response.json(
+        {
+          error:
+            "This host can't store uploads on its own disk. Paste a hosted image/video URL instead, or connect a media store (Cloudinary, S3).",
+        },
+        { status: 503 }
+      );
     }
     console.error("[upload] failed", error);
     return Response.json({ error: "The upload failed. Please try again." }, { status: 500 });

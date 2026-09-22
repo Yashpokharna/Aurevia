@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { checkPassword, endSession, isAdminConfigured, requireAdmin, startSession } from "@/lib/auth";
 import { toMinorUnits } from "@/lib/money";
+import { ReadOnlyStorageError } from "@/lib/repository/json-store";
 import { products, slugify } from "@/lib/repository/products";
 import { storage } from "@/lib/storage";
 import type { ProductMedia } from "@/lib/types";
@@ -104,7 +105,13 @@ export async function saveProductAction(_prev: FormState, formData: FormData): P
     category: category || null,
   };
 
-  const saved = id ? await products.update(id, payload) : await products.create(payload);
+  let saved;
+  try {
+    saved = id ? await products.update(id, payload) : await products.create(payload);
+  } catch (error) {
+    if (error instanceof ReadOnlyStorageError) return { error: error.message };
+    throw error;
+  }
   if (!saved) return { error: "That product no longer exists." };
 
   revalidatePath("/");
@@ -126,7 +133,12 @@ export async function deleteProductAction(formData: FormData): Promise<void> {
   const product = await products.findById(id);
   if (!product) redirect("/admin");
 
-  await products.remove(id);
+  try {
+    await products.remove(id);
+  } catch (error) {
+    if (error instanceof ReadOnlyStorageError) redirect("/admin?error=readonly");
+    throw error;
+  }
 
   // Clean up any files we actually own; remote URLs are left alone.
   await Promise.all(
