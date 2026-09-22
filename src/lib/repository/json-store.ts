@@ -2,7 +2,18 @@ import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-const DATA_DIR = path.join(process.cwd(), "data");
+/**
+ * Resolved lazily, never at import time: on some serverless runtimes the
+ * working directory is unusual enough that touching it at module load throws,
+ * which fails every import of this file — and with it every storefront route.
+ */
+function dataDir(): string {
+  return path.join(process.cwd(), "data");
+}
+
+function errorCode(error: unknown): string {
+  return (error as NodeJS.ErrnoException | undefined)?.code ?? (error as Error)?.name ?? "unknown";
+}
 
 /**
  * Thrown when a write is attempted on a host whose filesystem is read-only
@@ -56,35 +67,45 @@ export async function readCollection<T>(file: string, seed: () => T[]): Promise<
   const cached = memory.get(file);
   if (cached) return cached as T[];
 
-  const filePath = path.join(DATA_DIR, file);
+  let raw: string | null = null;
   try {
-    const raw = await fs.readFile(filePath, "utf8");
+    raw = await fs.readFile(path.join(dataDir(), file), "utf8");
+  } catch (error) {
+    // Missing file is the normal first-run case. Anything else (odd working
+    // directory, permissions, sandboxed runtime) is treated the same way:
+    // the disk isn't usable, so fall through to the seed. Never crash a page
+    // over it — log the real code so it's diagnosable from the host's logs.
+    if (errorCode(error) !== "ENOENT") {
+      console.warn(`[store] ${file}: cannot read from disk (${errorCode(error)}); falling back to seed data.`);
+    }
+  }
+
+  if (raw !== null) {
+    // A file that exists but is corrupt is a real problem — surface it.
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? (parsed as T[]) : [];
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-
-    const initial = seed();
-    try {
-      await writeCollection(file, initial);
-    } catch (writeError) {
-      if (!(writeError instanceof ReadOnlyStorageError)) throw writeError;
-      console.warn(
-        `[store] ${file}: filesystem is read-only — serving seed data from memory. Edits will not persist; connect a database for production.`
-      );
-      memory.set(file, initial);
-    }
-    return initial;
   }
+
+  const initial = seed();
+  try {
+    await writeCollection(file, initial);
+  } catch (error) {
+    console.warn(
+      `[store] ${file}: cannot write to disk (${error instanceof ReadOnlyStorageError ? "read-only" : errorCode(error)}) — serving seed data from memory. Edits will not persist; connect a database for production.`
+    );
+    memory.set(file, initial);
+  }
+  return initial;
 }
 
 export async function writeCollection<T>(file: string, items: T[]): Promise<void> {
-  const filePath = path.join(DATA_DIR, file);
-  // Write to a temp file then rename, so a crash mid-write can't truncate the
-  // real one.
-  const tempPath = `${filePath}.${process.pid}.tmp`;
   try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
+    const dir = dataDir();
+    const filePath = path.join(dir, file);
+    // Write to a temp file then rename, so a crash mid-write can't truncate
+    // the real one.
+    const tempPath = `${filePath}.${process.pid}.tmp`;
+    await fs.mkdir(dir, { recursive: true });
     await fs.writeFile(tempPath, `${JSON.stringify(items, null, 2)}\n`, "utf8");
     await fs.rename(tempPath, filePath);
   } catch (error) {
@@ -101,6 +122,9 @@ export async function mutateCollection<T, R>(
 ): Promise<R> {
   return withLock(file, async () => {
     const current = await readCollection<T>(file, seed);
+    // Already running from memory: the disk is known to be unusable, so say so
+    // clearly instead of failing on whatever error the write would produce.
+    if (memory.has(file)) throw new ReadOnlyStorageError();
     const { items, result } = await mutator(current);
     await writeCollection(file, items);
     return result;

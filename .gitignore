@@ -50,3 +50,9 @@ next-env.d.ts
 
 # JSON data store — this is runtime state, not source
 /data/*.json
+
+# Local Netlify folder
+.netlify
+
+# Netlify CLI local build output
+.netlify
